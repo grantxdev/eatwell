@@ -54,7 +54,7 @@ export default function ShoppingPage() {
     const res = await fetch('/api/shopping', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ weekStart }),
+      body: JSON.stringify({ weekStart, people: clamped }),
     })
     setItems(await res.json())
   }

@@ -102,7 +102,7 @@ export default function WeekPage() {
     })
 
     // Regenerate shopping list
-    fetch('/api/shopping', {
+    await fetch('/api/shopping', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ weekStart }),
@@ -121,7 +121,7 @@ export default function WeekPage() {
     setPlans((prev) => prev.filter((p) => !(p.day === day && p.mealType === mealType)))
     setDetailSlot(null)
 
-    fetch('/api/shopping', {
+    await fetch('/api/shopping', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ weekStart }),

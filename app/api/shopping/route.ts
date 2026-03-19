@@ -2,6 +2,25 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getWeekStart } from '@/lib/week'
 
+function normalizeUnit(unit: string): string {
+  const u = unit.toLowerCase().trim()
+  if (['g', 'gram', 'grams'].includes(u)) return 'g'
+  if (['kg', 'kilogram', 'kilograms'].includes(u)) return 'kg'
+  if (['ml', 'milliliter', 'milliliters', 'millilitre', 'millilitres'].includes(u)) return 'ml'
+  if (['l', 'liter', 'liters', 'litre', 'litres'].includes(u)) return 'l'
+  if (['tsp', 'teaspoon', 'teaspoons'].includes(u)) return 'tsp'
+  if (['tbsp', 'tablespoon', 'tablespoons'].includes(u)) return 'tbsp'
+  if (['cup', 'cups'].includes(u)) return 'cup'
+  if (['oz', 'ounce', 'ounces'].includes(u)) return 'oz'
+  if (['lb', 'lbs', 'pound', 'pounds'].includes(u)) return 'lb'
+  if (['piece', 'pieces', 'whole', 'unit', 'units', 'pcs'].includes(u)) return 'piece'
+  if (['clove', 'cloves'].includes(u)) return 'clove'
+  if (['slice', 'slices'].includes(u)) return 'slice'
+  if (['bunch', 'bunches'].includes(u)) return 'bunch'
+  if (['can', 'cans'].includes(u)) return 'can'
+  return u
+}
+
 function scaleAmount(amount: string, scale: number): string {
   if (scale === 1 || !amount) return amount
   const num = parseFloat(amount)
@@ -25,13 +44,16 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const weekStart = body.weekStart ?? getWeekStart()
 
-  // Get household size for scaling
-  const settings = await prisma.settings.upsert({
-    where: { id: 'household' },
-    create: { id: 'household', people: 2 },
-    update: {},
-  })
-  const householdPeople = settings.people
+  // Get household size for scaling — prefer value passed in body (avoids pool read lag)
+  let householdPeople: number = body.people
+  if (!householdPeople) {
+    const settings = await prisma.settings.upsert({
+      where: { id: 'household' },
+      create: { id: 'household', people: 2 },
+      update: {},
+    })
+    householdPeople = settings.people
+  }
 
   const plans = await prisma.weekPlan.findMany({
     where: { weekStart },
@@ -45,13 +67,13 @@ export async function POST(req: NextRequest) {
   >()
 
   for (const plan of plans) {
-    const mealServings = plan.meal.servings || 2
-    const scale = householdPeople / mealServings
+    const scale = householdPeople / 2
     const ingredients = JSON.parse(plan.meal.ingredients || '[]') as {
       name: string; amount: string; unit: string; category: string
     }[]
     for (const ing of ingredients) {
-      const key = `${ing.name.toLowerCase()}__${ing.unit.toLowerCase()}`
+      const normUnit = normalizeUnit(ing.unit)
+      const key = `${ing.name.toLowerCase().trim()}__${normUnit}`
       if (ingredientMap.has(key)) {
         // Add amounts together if same ingredient + unit
         const existing = ingredientMap.get(key)!
@@ -64,6 +86,7 @@ export async function POST(req: NextRequest) {
       } else {
         ingredientMap.set(key, {
           ...ing,
+          unit: normUnit,
           amount: scaleAmount(ing.amount, scale),
         })
       }

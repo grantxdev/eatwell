@@ -47,7 +47,6 @@ export default function AddMealForm({ editMeal, onSave, onClose }: AddMealFormPr
   const [kcal, setKcal] = useState(editMeal?.nutrition.kcal ? String(editMeal.nutrition.kcal) : '')
   const [protein, setProtein] = useState(editMeal?.nutrition.protein ? String(editMeal.nutrition.protein) : '')
   const [tags, setTags] = useState(editMeal?.tags ?? '')
-  const [servings, setServings] = useState(editMeal?.servings ?? 2)
   const [saving, setSaving] = useState(false)
   const [prefilling, setPrefilling] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -67,7 +66,6 @@ export default function AddMealForm({ editMeal, onSave, onClose }: AddMealFormPr
       setKcal(String(data.nutrition.kcal || ''))
       setProtein(String(data.nutrition.protein || ''))
       setTags(data.tags?.join(', ') ?? '')
-      setServings(data.servings ?? 2)
     } catch {
       // silently fail — user can still fill manually
     } finally {
@@ -115,7 +113,7 @@ export default function AddMealForm({ editMeal, onSave, onClose }: AddMealFormPr
       ingredients,
       nutrition: { kcal: parseInt(kcal) || 0, protein: parseInt(protein) || 0, carbs: 0, fat: 0 },
       tags,
-      servings,
+      servings: 2,
     })
     setSaving(false)
   }
@@ -236,29 +234,6 @@ export default function AddMealForm({ editMeal, onSave, onClose }: AddMealFormPr
                     {t.charAt(0) + t.slice(1).toLowerCase()}
                   </button>
                 ))}
-              </div>
-            </div>
-
-            {/* Servings */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Serves</label>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setServings(Math.max(1, servings - 1))}
-                  className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xl font-medium transition-colors"
-                >
-                  −
-                </button>
-                <span className="text-lg font-semibold text-gray-900 w-8 text-center">{servings}</span>
-                <button
-                  type="button"
-                  onClick={() => setServings(servings + 1)}
-                  className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xl font-medium transition-colors"
-                >
-                  +
-                </button>
-                <span className="text-sm text-gray-400">people</span>
               </div>
             </div>
 
