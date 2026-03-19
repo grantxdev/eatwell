@@ -4,14 +4,15 @@
   "private": true,
   "scripts": {
     "dev": "node node_modules/next/dist/bin/next dev",
-    "build": "node node_modules/next/dist/bin/next build",
-    "start": "node node_modules/next/dist/bin/next start",
-    "db:push": "npx prisma db push",
-    "db:studio": "npx prisma studio"
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
     "@prisma/client": "^5.7.0",
+    "@vercel/blob": "^2.3.1",
     "next": "14.2.35",
     "prisma": "^5.7.0",
     "react": "^18",
