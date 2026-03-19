@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// MealType: BREAKFAST | LUNCH | DINNER (stored as String)
+// DayOfWeek: MON | TUE | WED | THU | FRI | SAT | SUN (stored as String)
+
+model Meal {
+  id          String     @id @default(cuid())
+  name        String
+  type        String
+  ingredients String     @default("[]")
+  nutrition   String     @default("{}")
+  tags        String     @default("")
+  emoji       String     @default("🍽️")
+  createdAt   DateTime   @default(now())
+  weekPlans   WeekPlan[]
+}
+
+model WeekPlan {
+  id        String   @id @default(cuid())
+  weekStart String
+  day       String
+  mealType  String
+  mealId    String
+  meal      Meal     @relation(fields: [mealId], references: [id], onDelete: Cascade)
+
+  @@unique([weekStart, day, mealType])
+}
+
+model ShoppingItem {
+  id        String  @id @default(cuid())
+  weekStart String
+  name      String
+  amount    String  @default("")
+  unit      String  @default("")
+  category  String  @default("other")
+  checked   Boolean @default(false)
+}

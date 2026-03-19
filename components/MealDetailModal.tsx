@@ -1,0 +1,112 @@
+'use client'
+
+interface Ingredient {
+  name: string
+  amount: string
+  unit: string
+  category: string
+}
+
+interface Meal {
+  id: string
+  name: string
+  type: string
+  emoji: string
+  tags: string
+  nutrition: { kcal: number; protein: number; carbs: number; fat: number }
+  ingredients: Ingredient[]
+}
+
+interface MealDetailModalProps {
+  meal: Meal
+  day?: string
+  mealType?: string
+  onClose: () => void
+  onRemove?: () => void
+}
+
+export default function MealDetailModal({
+  meal,
+  day,
+  mealType,
+  onClose,
+  onRemove,
+}: MealDetailModalProps) {
+  return (
+    <div
+      className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-3xl w-full max-w-md max-h-[85vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-6">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <span className="text-4xl leading-none">{meal.emoji}</span>
+              <h2 className="text-2xl font-bold text-gray-900 mt-2">{meal.name}</h2>
+              {day && mealType && (
+                <p className="text-sm text-gray-400 mt-0.5">
+                  {day} · {mealType.charAt(0) + mealType.slice(1).toLowerCase()}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={onClose}
+              className="text-gray-300 hover:text-gray-500 text-2xl leading-none mt-1"
+            >
+              ×
+            </button>
+          </div>
+
+          {meal.nutrition?.kcal > 0 && (
+            <div className="grid grid-cols-4 gap-2 mb-5">
+              {[
+                { label: 'Calories', value: meal.nutrition.kcal, unit: '' },
+                { label: 'Protein', value: meal.nutrition.protein, unit: 'g' },
+                { label: 'Carbs', value: meal.nutrition.carbs, unit: 'g' },
+                { label: 'Fat', value: meal.nutrition.fat, unit: 'g' },
+              ].map((stat) => (
+                <div key={stat.label} className="bg-gray-50 rounded-xl p-3 text-center">
+                  <p className="text-lg font-bold text-gray-900">
+                    {stat.value}
+                    {stat.unit}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">{stat.label}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {meal.ingredients?.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                Ingredients
+              </h3>
+              <ul className="space-y-2">
+                {meal.ingredients.map((ing, i) => (
+                  <li key={i} className="flex justify-between text-sm">
+                    <span className="text-gray-800 capitalize">{ing.name}</span>
+                    <span className="text-gray-400">
+                      {ing.amount} {ing.unit}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {onRemove && (
+            <button
+              onClick={onRemove}
+              className="mt-6 w-full py-3 text-sm text-red-400 hover:text-red-500 border border-red-100 hover:border-red-200 rounded-2xl transition-colors"
+            >
+              Remove from this slot
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
