@@ -10,6 +10,14 @@ export interface MealSuggestion {
   ingredients: { name: string; amount: string; unit: string; category: string }[]
   nutrition: { kcal: number; protein: number; carbs: number; fat: number }
   tags: string[]
+  servings: number
+}
+
+export interface MealPrefill {
+  ingredients: { name: string; amount: string; unit: string; category: string }[]
+  nutrition: { kcal: number; protein: number; carbs: number; fat: number }
+  tags: string[]
+  servings: number
 }
 
 export async function suggestMeals(
@@ -34,11 +42,12 @@ export async function suggestMeals(
 Return ONLY a JSON array with exactly ${count} meals. Each meal object must have:
 - name: string (meal name)
 - ingredients: array of {name, amount, unit, category} where category is one of: produce, proteins, dairy, grains, pantry, other
-- nutrition: {kcal, protein, carbs, fat} (numbers)
+- nutrition: {kcal, protein, carbs, fat} (numbers, per serving)
 - tags: array of strings (e.g. ["quick", "healthy", "vegetarian"])
+- servings: number (how many people this recipe serves, typically 2-4)
 
 Example format:
-[{"name":"Avocado Toast","ingredients":[{"name":"bread","amount":"2","unit":"slices","category":"grains"},{"name":"avocado","amount":"1","unit":"whole","category":"produce"}],"nutrition":{"kcal":320,"protein":8,"carbs":35,"fat":18},"tags":["quick","vegetarian"]}]
+[{"name":"Avocado Toast","ingredients":[{"name":"bread","amount":"2","unit":"slices","category":"grains"},{"name":"avocado","amount":"1","unit":"whole","category":"produce"}],"nutrition":{"kcal":320,"protein":8,"carbs":35,"fat":18},"tags":["quick","vegetarian"],"servings":2}]
 
 Return only the JSON array, no other text.`,
       },
@@ -47,10 +56,33 @@ Return only the JSON array, no other text.`,
 
   const content = message.content[0]
   if (content.type !== 'text') throw new Error('Unexpected response type')
-
-  const text = content.text.trim()
-  const jsonMatch = text.match(/\[[\s\S]*\]/)
+  const jsonMatch = content.text.trim().match(/\[[\s\S]*\]/)
   if (!jsonMatch) throw new Error('No JSON array found in response')
-
   return JSON.parse(jsonMatch[0]) as MealSuggestion[]
+}
+
+export async function prefillMeal(name: string): Promise<MealPrefill> {
+  const message = await client.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 1024,
+    messages: [
+      {
+        role: 'user',
+        content: `For the meal "${name}", return a JSON object with:
+- ingredients: array of {name, amount, unit, category} where category is one of: produce, proteins, dairy, grains, pantry, other
+- nutrition: {kcal, protein, carbs, fat} (numbers, per serving)
+- tags: array of strings (e.g. ["quick", "healthy"])
+- servings: number (typical serving size for this dish, e.g. 2 or 4)
+
+Return ONLY the JSON object, no other text.
+Example: {"ingredients":[{"name":"chicken breast","amount":"200","unit":"g","category":"proteins"}],"nutrition":{"kcal":450,"protein":35,"carbs":40,"fat":12},"tags":["high-protein"],"servings":2}`,
+      },
+    ],
+  })
+
+  const content = message.content[0]
+  if (content.type !== 'text') throw new Error('Unexpected response type')
+  const jsonMatch = content.text.trim().match(/\{[\s\S]*\}/)
+  if (!jsonMatch) throw new Error('No JSON found in response')
+  return JSON.parse(jsonMatch[0]) as MealPrefill
 }

@@ -19,6 +19,7 @@ interface Meal {
   type: string
   imageUrl?: string
   tags: string
+  servings: number
   nutrition: { kcal: number; protein: number; carbs: number; fat: number }
   ingredients: Ingredient[]
 }

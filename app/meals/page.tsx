@@ -18,6 +18,7 @@ interface Meal {
   type: string
   imageUrl?: string
   tags: string
+  servings: number
   nutrition: { kcal: number; protein: number; carbs: number; fat: number }
   ingredients: Ingredient[]
 }
@@ -28,6 +29,7 @@ export default function MealsPage() {
   const [meals, setMeals] = useState<Meal[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddForm, setShowAddForm] = useState(false)
+  const [editingMeal, setEditingMeal] = useState<Meal | null>(null)
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null)
   const [filter, setFilter] = useState('ALL')
 
@@ -40,12 +42,10 @@ export default function MealsPage() {
   useEffect(() => { fetchMeals() }, [fetchMeals])
 
   async function addMeal(data: {
-    name: string
-    type: string
-    imageUrl: string
+    name: string; type: string; imageUrl: string
     ingredients: Ingredient[]
     nutrition: { kcal: number; protein: number; carbs: number; fat: number }
-    tags: string
+    tags: string; servings: number
   }) {
     const res = await fetch('/api/meals', {
       method: 'POST',
@@ -55,6 +55,24 @@ export default function MealsPage() {
     const meal = await res.json()
     setMeals((prev) => [meal, ...prev])
     setShowAddForm(false)
+  }
+
+  async function saveMealEdit(data: {
+    name: string; type: string; imageUrl: string
+    ingredients: Ingredient[]
+    nutrition: { kcal: number; protein: number; carbs: number; fat: number }
+    tags: string; servings: number
+  }) {
+    if (!editingMeal) return
+    const res = await fetch(`/api/meals/${editingMeal.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    const updated = await res.json()
+    setMeals((prev) => prev.map((m) => (m.id === updated.id ? updated : m)))
+    setEditingMeal(null)
+    setSelectedMeal(null)
   }
 
   async function deleteMeal(id: string) {
@@ -79,7 +97,7 @@ export default function MealsPage() {
         </button>
       </div>
 
-      <div className="flex gap-2 mb-5 overflow-x-auto pb-1 no-scrollbar">
+      <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
         {FILTERS.map((f) => (
           <button
             key={f}
@@ -94,9 +112,7 @@ export default function MealsPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20 text-gray-300 text-sm">
-          Loading…
-        </div>
+        <div className="flex items-center justify-center py-20 text-gray-300 text-sm">Loading…</div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-20">
           <div className="w-16 h-16 bg-gray-100 rounded-2xl mx-auto mb-4 flex items-center justify-center">
@@ -109,12 +125,7 @@ export default function MealsPage() {
       ) : (
         <div className="grid grid-cols-2 gap-3">
           {filtered.map((meal) => (
-            <MealCard
-              key={meal.id}
-              meal={meal}
-              onDelete={deleteMeal}
-              onClick={setSelectedMeal}
-            />
+            <MealCard key={meal.id} meal={meal} onDelete={deleteMeal} onClick={setSelectedMeal} />
           ))}
         </div>
       )}
@@ -123,10 +134,19 @@ export default function MealsPage() {
         <AddMealForm onSave={addMeal} onClose={() => setShowAddForm(false)} />
       )}
 
-      {selectedMeal && (
+      {editingMeal && (
+        <AddMealForm
+          editMeal={editingMeal}
+          onSave={saveMealEdit}
+          onClose={() => setEditingMeal(null)}
+        />
+      )}
+
+      {selectedMeal && !editingMeal && (
         <MealDetailModal
           meal={selectedMeal}
           onClose={() => setSelectedMeal(null)}
+          onEdit={() => setEditingMeal(selectedMeal)}
         />
       )}
     </div>

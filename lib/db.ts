@@ -22,6 +22,7 @@ export function parseMeal(meal: {
   tags: string
   emoji: string
   imageUrl: string
+  servings: number
   createdAt: Date
 }) {
   return {

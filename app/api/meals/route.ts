@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
       tags: Array.isArray(body.tags) ? body.tags.join(',') : (body.tags ?? ''),
       emoji: '',
       imageUrl: body.imageUrl ?? '',
+      servings: body.servings ?? 2,
     },
   })
   return NextResponse.json(parseMeal(meal), { status: 201 })

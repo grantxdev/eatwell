@@ -2,31 +2,78 @@
 
 import { useRef, useState } from 'react'
 
+interface Ingredient {
+  name: string
+  amount: string
+  unit: string
+  category: string
+}
+
+interface MealData {
+  name: string
+  type: string
+  imageUrl: string
+  ingredients: Ingredient[]
+  nutrition: { kcal: number; protein: number; carbs: number; fat: number }
+  tags: string
+  servings: number
+}
+
+interface EditMeal extends Omit<MealData, 'imageUrl'> {
+  id: string
+  imageUrl?: string
+}
+
 interface AddMealFormProps {
-  onSave: (meal: {
-    name: string
-    type: string
-    imageUrl: string
-    ingredients: { name: string; amount: string; unit: string; category: string }[]
-    nutrition: { kcal: number; protein: number; carbs: number; fat: number }
-    tags: string
-  }) => Promise<void>
+  editMeal?: EditMeal
+  onSave: (meal: MealData) => Promise<void>
   onClose: () => void
 }
 
-export default function AddMealForm({ onSave, onClose }: AddMealFormProps) {
-  const [name, setName] = useState('')
-  const [type, setType] = useState('DINNER')
-  const [imageUrl, setImageUrl] = useState('')
+function ingredientsToText(ingredients: Ingredient[]): string {
+  return ingredients.map((i) => [i.name, i.amount, i.unit, i.category].filter(Boolean).join(', ')).join('\n')
+}
+
+export default function AddMealForm({ editMeal, onSave, onClose }: AddMealFormProps) {
+  const [name, setName] = useState(editMeal?.name ?? '')
+  const [type, setType] = useState(editMeal?.type ?? 'DINNER')
+  const [imageUrl, setImageUrl] = useState(editMeal?.imageUrl ?? '')
   const [urlInput, setUrlInput] = useState('')
   const [showUrlInput, setShowUrlInput] = useState(false)
   const [uploading, setUploading] = useState(false)
-  const [ingredientsText, setIngredientsText] = useState('')
-  const [kcal, setKcal] = useState('')
-  const [protein, setProtein] = useState('')
-  const [tags, setTags] = useState('')
+  const [ingredientsText, setIngredientsText] = useState(
+    editMeal ? ingredientsToText(editMeal.ingredients) : ''
+  )
+  const [kcal, setKcal] = useState(editMeal?.nutrition.kcal ? String(editMeal.nutrition.kcal) : '')
+  const [protein, setProtein] = useState(editMeal?.nutrition.protein ? String(editMeal.nutrition.protein) : '')
+  const [tags, setTags] = useState(editMeal?.tags ?? '')
+  const [servings, setServings] = useState(editMeal?.servings ?? 2)
   const [saving, setSaving] = useState(false)
+  const [prefilling, setPrefilling] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  async function handlePrefill() {
+    if (!name.trim()) return
+    setPrefilling(true)
+    try {
+      const res = await fetch('/api/prefill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      })
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+      setIngredientsText(ingredientsToText(data.ingredients))
+      setKcal(String(data.nutrition.kcal || ''))
+      setProtein(String(data.nutrition.protein || ''))
+      setTags(data.tags?.join(', ') ?? '')
+      setServings(data.servings ?? 2)
+    } catch {
+      // silently fail — user can still fill manually
+    } finally {
+      setPrefilling(false)
+    }
+  }
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -68,9 +115,12 @@ export default function AddMealForm({ onSave, onClose }: AddMealFormProps) {
       ingredients,
       nutrition: { kcal: parseInt(kcal) || 0, protein: parseInt(protein) || 0, carbs: 0, fat: 0 },
       tags,
+      servings,
     })
     setSaving(false)
   }
+
+  const isEdit = !!editMeal
 
   return (
     <div
@@ -87,11 +137,7 @@ export default function AddMealForm({ onSave, onClose }: AddMealFormProps) {
             {imageUrl ? (
               <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={imageUrl}
-                  alt="Meal preview"
-                  className="w-full h-52 object-cover rounded-t-3xl"
-                />
+                <img src={imageUrl} alt="Meal preview" className="w-full h-52 object-cover rounded-t-3xl" />
                 <button
                   type="button"
                   onClick={() => setImageUrl('')}
@@ -122,16 +168,9 @@ export default function AddMealForm({ onSave, onClose }: AddMealFormProps) {
                 </div>
               </div>
             )}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleFileUpload}
-            />
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
           </div>
 
-          {/* URL input (shown inline when Paste URL is tapped) */}
           {showUrlInput && !imageUrl && (
             <div className="px-6 pt-4 flex gap-2">
               <input
@@ -143,51 +182,47 @@ export default function AddMealForm({ onSave, onClose }: AddMealFormProps) {
                 className="flex-1 px-4 py-2.5 bg-gray-50 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-black/10"
                 autoFocus
               />
-              <button
-                type="button"
-                onClick={applyUrl}
-                className="px-4 py-2.5 bg-black text-white rounded-xl text-sm font-medium shrink-0"
-              >
-                Add
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowUrlInput(false)}
-                className="px-3 py-2.5 text-gray-400 hover:text-gray-600"
-              >
-                ×
-              </button>
+              <button type="button" onClick={applyUrl} className="px-4 py-2.5 bg-black text-white rounded-xl text-sm font-medium shrink-0">Add</button>
+              <button type="button" onClick={() => setShowUrlInput(false)} className="px-3 py-2.5 text-gray-400 hover:text-gray-600">×</button>
             </div>
           )}
 
           <div className="p-6 pt-5 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">New meal</h2>
-              <button type="button" onClick={onClose} className="text-gray-300 hover:text-gray-500 text-2xl leading-none">
-                ×
-              </button>
+              <h2 className="text-xl font-bold text-gray-900">{isEdit ? 'Edit meal' : 'New meal'}</h2>
+              <button type="button" onClick={onClose} className="text-gray-300 hover:text-gray-500 text-2xl leading-none">×</button>
             </div>
 
-            {/* Name */}
+            {/* Name + AI prefill */}
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
-                Name *
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Spicy Salmon Bowl"
-                className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-gray-900 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-black/10"
-                autoFocus
-              />
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Name *</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Spicy Salmon Bowl"
+                  className="flex-1 px-4 py-3 bg-gray-50 rounded-2xl text-gray-900 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-black/10"
+                  autoFocus={!isEdit}
+                />
+                <button
+                  type="button"
+                  onClick={handlePrefill}
+                  disabled={prefilling || !name.trim()}
+                  title="Let AI fill in the details"
+                  className="px-4 py-3 bg-gray-900 text-white rounded-2xl text-sm font-medium disabled:opacity-40 hover:bg-black transition-colors whitespace-nowrap shrink-0"
+                >
+                  {prefilling ? '…' : '✨ Fill'}
+                </button>
+              </div>
+              {name.trim() && !prefilling && (
+                <p className="text-xs text-gray-400 mt-1.5 ml-1">Type the meal name then tap ✨ Fill to auto-fill details</p>
+              )}
             </div>
 
             {/* Meal type */}
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
-                Meal type
-              </label>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Meal type</label>
               <div className="flex gap-2">
                 {['BREAKFAST', 'LUNCH', 'DINNER'].map((t) => (
                   <button
@@ -204,17 +239,40 @@ export default function AddMealForm({ onSave, onClose }: AddMealFormProps) {
               </div>
             </div>
 
+            {/* Servings */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Serves</label>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setServings(Math.max(1, servings - 1))}
+                  className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xl font-medium transition-colors"
+                >
+                  −
+                </button>
+                <span className="text-lg font-semibold text-gray-900 w-8 text-center">{servings}</span>
+                <button
+                  type="button"
+                  onClick={() => setServings(servings + 1)}
+                  className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xl font-medium transition-colors"
+                >
+                  +
+                </button>
+                <span className="text-sm text-gray-400">people</span>
+              </div>
+            </div>
+
             {/* Ingredients */}
             <div>
               <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
                 Ingredients
-                <span className="normal-case font-normal ml-1 text-gray-300">(one per line: name, amount, unit, category)</span>
+                <span className="normal-case font-normal ml-1 text-gray-300">(name, amount, unit, category)</span>
               </label>
               <textarea
                 value={ingredientsText}
                 onChange={(e) => setIngredientsText(e.target.value)}
                 placeholder={'salmon, 150, g, proteins\nrice, 80, g, grains\navocado, 1, whole, produce'}
-                rows={4}
+                rows={5}
                 className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-black/10 resize-none"
               />
             </div>
@@ -260,7 +318,7 @@ export default function AddMealForm({ onSave, onClose }: AddMealFormProps) {
               disabled={saving || !name.trim()}
               className="w-full py-4 bg-black text-white font-semibold rounded-2xl disabled:opacity-40 transition-opacity"
             >
-              {saving ? 'Saving…' : 'Save meal'}
+              {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Save meal'}
             </button>
           </div>
         </form>

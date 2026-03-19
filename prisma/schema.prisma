@@ -17,6 +17,7 @@ model Meal {
   tags        String     @default("")
   emoji       String     @default("")
   imageUrl    String     @default("")
+  servings    Int        @default(2)
   createdAt   DateTime   @default(now())
   weekPlans   WeekPlan[]
 }
@@ -40,4 +41,9 @@ model ShoppingItem {
   unit      String  @default("")
   category  String  @default("other")
   checked   Boolean @default(false)
+}
+
+model Settings {
+  id     String @id @default("household")
+  people Int    @default(2)
 }

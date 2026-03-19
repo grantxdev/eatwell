@@ -13,6 +13,7 @@ interface Meal {
   type: string
   imageUrl?: string
   tags: string
+  servings: number
   nutrition: { kcal: number; protein: number; carbs: number; fat: number }
   ingredients: Ingredient[]
 }
@@ -23,6 +24,7 @@ interface MealDetailModalProps {
   mealType?: string
   onClose: () => void
   onRemove?: () => void
+  onEdit?: () => void
 }
 
 export default function MealDetailModal({
@@ -31,6 +33,7 @@ export default function MealDetailModal({
   mealType,
   onClose,
   onRemove,
+  onEdit,
 }: MealDetailModalProps) {
   return (
     <div
@@ -45,16 +48,10 @@ export default function MealDetailModal({
         <div className="relative">
           {meal.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={meal.imageUrl}
-              alt={meal.name}
-              className="w-full h-52 object-cover rounded-t-3xl"
-            />
+            <img src={meal.imageUrl} alt={meal.name} className="w-full h-52 object-cover rounded-t-3xl" />
           ) : (
             <div className="w-full h-52 bg-gray-100 rounded-t-3xl flex items-center justify-center">
-              <span className="text-7xl font-bold text-gray-200">
-                {meal.name?.charAt(0)?.toUpperCase()}
-              </span>
+              <span className="text-7xl font-bold text-gray-200">{meal.name?.charAt(0)?.toUpperCase()}</span>
             </div>
           )}
           <button
@@ -66,12 +63,23 @@ export default function MealDetailModal({
         </div>
 
         <div className="p-6">
-          <h2 className="text-2xl font-bold text-gray-900 leading-tight">{meal.name}</h2>
-          {day && mealType && (
-            <p className="text-sm text-gray-400 mt-1">
-              {day} · {mealType.charAt(0) + mealType.slice(1).toLowerCase()}
-            </p>
-          )}
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 leading-tight">{meal.name}</h2>
+              <p className="text-sm text-gray-400 mt-1">
+                {day && mealType ? `${day} · ${mealType.charAt(0) + mealType.slice(1).toLowerCase()} · ` : ''}
+                Serves {meal.servings ?? 2}
+              </p>
+            </div>
+            {onEdit && (
+              <button
+                onClick={onEdit}
+                className="shrink-0 px-4 py-2 text-sm font-medium border border-gray-200 rounded-xl hover:border-gray-400 transition-colors"
+              >
+                Edit
+              </button>
+            )}
+          </div>
 
           {meal.nutrition?.kcal > 0 && (
             <div className="grid grid-cols-4 gap-2 mt-5">
@@ -82,9 +90,7 @@ export default function MealDetailModal({
                 { label: 'Fat', value: meal.nutrition.fat, unit: 'g' },
               ].map((stat) => (
                 <div key={stat.label} className="bg-gray-50 rounded-xl p-3 text-center">
-                  <p className="text-lg font-bold text-gray-900">
-                    {stat.value}{stat.unit}
-                  </p>
+                  <p className="text-lg font-bold text-gray-900">{stat.value}{stat.unit}</p>
                   <p className="text-xs text-gray-400 mt-0.5">{stat.label}</p>
                 </div>
               ))}
@@ -94,7 +100,7 @@ export default function MealDetailModal({
           {meal.ingredients?.length > 0 && (
             <div className="mt-5">
               <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-                Ingredients
+                Ingredients · serves {meal.servings ?? 2}
               </h3>
               <ul className="space-y-2">
                 {meal.ingredients.map((ing, i) => (
