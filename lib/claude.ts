@@ -6,7 +6,6 @@ const client = new Anthropic({
 
 export interface MealSuggestion {
   name: string
-  emoji: string
   imageUrl: string
   ingredients: { name: string; amount: string; unit: string; category: string }[]
   nutrition: { kcal: number; protein: number; carbs: number; fat: number }
@@ -34,13 +33,12 @@ export async function suggestMeals(
 
 Return ONLY a JSON array with exactly ${count} meals. Each meal object must have:
 - name: string (meal name)
-- emoji: string (single emoji)
 - ingredients: array of {name, amount, unit, category} where category is one of: produce, proteins, dairy, grains, pantry, other
 - nutrition: {kcal, protein, carbs, fat} (numbers)
 - tags: array of strings (e.g. ["quick", "healthy", "vegetarian"])
 
 Example format:
-[{"name":"Avocado Toast","emoji":"🥑","ingredients":[{"name":"bread","amount":"2","unit":"slices","category":"grains"},{"name":"avocado","amount":"1","unit":"whole","category":"produce"}],"nutrition":{"kcal":320,"protein":8,"carbs":35,"fat":18},"tags":["quick","vegetarian"]}]
+[{"name":"Avocado Toast","ingredients":[{"name":"bread","amount":"2","unit":"slices","category":"grains"},{"name":"avocado","amount":"1","unit":"whole","category":"produce"}],"nutrition":{"kcal":320,"protein":8,"carbs":35,"fat":18},"tags":["quick","vegetarian"]}]
 
 Return only the JSON array, no other text.`,
       },

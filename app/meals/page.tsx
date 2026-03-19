@@ -16,13 +16,13 @@ interface Meal {
   id: string
   name: string
   type: string
-  emoji: string
+  imageUrl?: string
   tags: string
   nutrition: { kcal: number; protein: number; carbs: number; fat: number }
   ingredients: Ingredient[]
 }
 
-const MEAL_TYPE_FILTERS = ['ALL', 'BREAKFAST', 'LUNCH', 'DINNER']
+const FILTERS = ['ALL', 'BREAKFAST', 'LUNCH', 'DINNER']
 
 export default function MealsPage() {
   const [meals, setMeals] = useState<Meal[]>([])
@@ -37,14 +37,12 @@ export default function MealsPage() {
     setLoading(false)
   }, [])
 
-  useEffect(() => {
-    fetchMeals()
-  }, [fetchMeals])
+  useEffect(() => { fetchMeals() }, [fetchMeals])
 
   async function addMeal(data: {
     name: string
     type: string
-    emoji: string
+    imageUrl: string
     ingredients: Ingredient[]
     nutrition: { kcal: number; protein: number; carbs: number; fat: number }
     tags: string
@@ -75,14 +73,14 @@ export default function MealsPage() {
         </div>
         <button
           onClick={() => setShowAddForm(true)}
-          className="bg-black text-white text-sm font-semibold px-4 py-2 rounded-2xl"
+          className="bg-black text-white text-sm font-semibold px-4 py-2.5 rounded-2xl"
         >
           + Add meal
         </button>
       </div>
 
-      <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
-        {MEAL_TYPE_FILTERS.map((f) => (
+      <div className="flex gap-2 mb-5 overflow-x-auto pb-1 no-scrollbar">
+        {FILTERS.map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
@@ -97,19 +95,19 @@ export default function MealsPage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-20 text-gray-300 text-sm">
-          Loading...
+          Loading…
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-20">
-          <span className="text-5xl">🍽️</span>
-          <p className="text-gray-400 text-sm mt-4">
-            {meals.length === 0
-              ? 'No meals yet. Add your first one!'
-              : 'No meals in this category.'}
+          <div className="w-16 h-16 bg-gray-100 rounded-2xl mx-auto mb-4 flex items-center justify-center">
+            <span className="text-2xl font-bold text-gray-300">?</span>
+          </div>
+          <p className="text-gray-400 text-sm">
+            {meals.length === 0 ? 'No meals yet — add your first one.' : 'No meals in this category.'}
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
           {filtered.map((meal) => (
             <MealCard
               key={meal.id}

@@ -1,41 +1,40 @@
 interface MealImageProps {
   imageUrl?: string
-  emoji: string
-  size: 'sm' | 'md' | 'lg' | 'xl'
+  name: string
+  size: 'sm' | 'md' | 'lg'
   className?: string
 }
 
-const sizes = {
-  sm: { px: 36, text: 'text-lg' },
-  md: { px: 52, text: 'text-3xl' },
-  lg: { px: 72, text: 'text-4xl' },
-  xl: { px: 120, text: 'text-5xl' },
+const sizeMap = {
+  sm: { wh: 36, text: 'text-sm' },
+  md: { wh: 52, text: 'text-base' },
+  lg: { wh: 72, text: 'text-xl' },
 }
 
-export default function MealImage({ imageUrl, emoji, size, className = '' }: MealImageProps) {
-  const { px, text } = sizes[size]
+export default function MealImage({ imageUrl, name, size, className = '' }: MealImageProps) {
+  const { wh, text } = sizeMap[size]
+  const initial = name?.charAt(0)?.toUpperCase() ?? '?'
 
   if (imageUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={imageUrl}
-        alt=""
-        width={px}
-        height={px}
-        className={`object-cover rounded-xl shrink-0 ${className}`}
-        style={{ width: px, height: px }}
-        onError={(e) => {
-          // If image fails to load, hide it and let parent show emoji fallback
-          ;(e.target as HTMLImageElement).style.display = 'none'
-        }}
+        alt={name}
+        width={wh}
+        height={wh}
+        className={`object-cover rounded-xl shrink-0 bg-gray-100 ${className}`}
+        style={{ width: wh, height: wh }}
       />
     )
   }
 
   return (
-    <span className={`${text} leading-none shrink-0 ${className}`}>
-      {emoji}
-    </span>
+    <div
+      className={`rounded-xl shrink-0 bg-gray-100 flex items-center justify-center ${className}`}
+      style={{ width: wh, height: wh }}
+    >
+      <span className={`${text} font-semibold text-gray-400`}>{initial}</span>
+    </div>
   )
 }

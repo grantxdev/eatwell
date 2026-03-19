@@ -1,12 +1,9 @@
 'use client'
 
-import MealImage from './MealImage'
-
 interface Meal {
   id: string
   name: string
   type: string
-  emoji: string
   imageUrl?: string
   tags: string
   nutrition: { kcal: number; protein: number; carbs: number; fat: number }
@@ -19,54 +16,53 @@ interface MealCardProps {
   onClick?: (meal: Meal) => void
 }
 
-export default function MealCard({ meal, onDelete, onClick }: MealCardProps) {
-  const tags = meal.tags ? meal.tags.split(',').filter(Boolean) : []
+const initial = (name: string) => name?.charAt(0)?.toUpperCase() ?? '?'
 
+export default function MealCard({ meal, onDelete, onClick }: MealCardProps) {
   return (
     <div
-      className={`bg-white rounded-2xl p-4 border border-gray-100 shadow-sm ${
-        onClick ? 'cursor-pointer hover:border-gray-300 transition-colors' : ''
+      className={`bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm ${
+        onClick ? 'cursor-pointer active:scale-[0.98] transition-transform' : ''
       }`}
       onClick={() => onClick?.(meal)}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-3 min-w-0">
-          <MealImage imageUrl={meal.imageUrl} emoji={meal.emoji} size="md" />
-          <div className="min-w-0">
-            <p className="font-semibold text-gray-900 leading-tight truncate">{meal.name}</p>
-            <p className="text-xs text-gray-400 mt-0.5 capitalize">{meal.type.toLowerCase()}</p>
+      {/* Image */}
+      <div className="aspect-square bg-gray-100 relative">
+        {meal.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={meal.imageUrl}
+            alt={meal.name}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <span className="text-4xl font-bold text-gray-200">{initial(meal.name)}</span>
           </div>
-        </div>
+        )}
         {onDelete && (
           <button
             onClick={(e) => {
               e.stopPropagation()
               onDelete(meal.id)
             }}
-            className="text-gray-300 hover:text-red-400 transition-colors shrink-0 text-lg leading-none"
+            className="absolute top-2 right-2 w-7 h-7 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center text-base leading-none transition-colors"
           >
             ×
           </button>
         )}
       </div>
-      {meal.nutrition?.kcal > 0 && (
-        <div className="mt-3 flex gap-3 text-xs text-gray-400">
-          <span>{meal.nutrition.kcal} kcal</span>
-          <span>{meal.nutrition.protein}g protein</span>
+
+      {/* Info */}
+      <div className="p-3">
+        <p className="font-semibold text-gray-900 text-sm leading-tight truncate">{meal.name}</p>
+        <div className="flex items-center justify-between mt-1">
+          <p className="text-xs text-gray-400 capitalize">{meal.type.toLowerCase()}</p>
+          {meal.nutrition?.kcal > 0 && (
+            <p className="text-xs text-gray-400">{meal.nutrition.kcal} kcal</p>
+          )}
         </div>
-      )}
-      {tags.length > 0 && (
-        <div className="mt-2 flex gap-1 flex-wrap">
-          {tags.slice(0, 3).map((tag) => (
-            <span
-              key={tag}
-              className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
-      )}
+      </div>
     </div>
   )
 }

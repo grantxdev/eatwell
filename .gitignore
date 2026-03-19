@@ -29,6 +29,10 @@ yarn-error.log*
 .env*.local
 .env
 
+# uploaded food images (local only)
+/public/uploads/*
+!/public/uploads/.gitkeep
+
 # database
 prisma/dev.db
 prisma/dev.db-journal

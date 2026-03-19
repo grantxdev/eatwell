@@ -17,7 +17,6 @@ interface Meal {
   id: string
   name: string
   type: string
-  emoji: string
   imageUrl?: string
   tags: string
   nutrition: { kcal: number; protein: number; carbs: number; fat: number }
@@ -173,7 +172,7 @@ export default function WeekPage() {
                       </span>
                       {plan ? (
                         <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <MealImage imageUrl={plan.meal.imageUrl} emoji={plan.meal.emoji} size="sm" />
+                          <MealImage imageUrl={plan.meal.imageUrl} name={plan.meal.name} size="sm" />
                           <span className="text-sm font-medium text-gray-900 truncate">
                             {plan.meal.name}
                           </span>
