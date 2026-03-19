@@ -18,6 +18,7 @@ model Meal {
   nutrition   String     @default("{}")
   tags        String     @default("")
   emoji       String     @default("🍽️")
+  imageUrl    String     @default("")
   createdAt   DateTime   @default(now())
   weekPlans   WeekPlan[]
 }

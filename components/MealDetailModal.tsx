@@ -1,5 +1,7 @@
 'use client'
 
+import MealImage from './MealImage'
+
 interface Ingredient {
   name: string
   amount: string
@@ -12,6 +14,7 @@ interface Meal {
   name: string
   type: string
   emoji: string
+  imageUrl?: string
   tags: string
   nutrition: { kcal: number; protein: number; carbs: number; fat: number }
   ingredients: Ingredient[]
@@ -41,20 +44,34 @@ export default function MealDetailModal({
         className="bg-white rounded-3xl w-full max-w-md max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Hero image */}
+        {meal.imageUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={meal.imageUrl}
+            alt={meal.name}
+            className="w-full h-48 object-cover rounded-t-3xl"
+          />
+        )}
+
         <div className="p-6">
           <div className="flex items-start justify-between mb-4">
-            <div>
-              <span className="text-4xl leading-none">{meal.emoji}</span>
-              <h2 className="text-2xl font-bold text-gray-900 mt-2">{meal.name}</h2>
-              {day && mealType && (
-                <p className="text-sm text-gray-400 mt-0.5">
-                  {day} · {mealType.charAt(0) + mealType.slice(1).toLowerCase()}
-                </p>
+            <div className="flex items-start gap-3">
+              {!meal.imageUrl && (
+                <MealImage imageUrl={undefined} emoji={meal.emoji} size="lg" />
               )}
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 leading-tight">{meal.name}</h2>
+                {day && mealType && (
+                  <p className="text-sm text-gray-400 mt-0.5">
+                    {day} · {mealType.charAt(0) + mealType.slice(1).toLowerCase()}
+                  </p>
+                )}
+              </div>
             </div>
             <button
               onClick={onClose}
-              className="text-gray-300 hover:text-gray-500 text-2xl leading-none mt-1"
+              className="text-gray-300 hover:text-gray-500 text-2xl leading-none mt-1 shrink-0"
             >
               ×
             </button>

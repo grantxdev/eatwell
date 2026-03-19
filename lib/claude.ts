@@ -7,6 +7,7 @@ const client = new Anthropic({
 export interface MealSuggestion {
   name: string
   emoji: string
+  imageUrl: string
   ingredients: { name: string; amount: string; unit: string; category: string }[]
   nutrition: { kcal: number; protein: number; carbs: number; fat: number }
   tags: string[]

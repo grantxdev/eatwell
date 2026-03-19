@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { suggestMeals } from '@/lib/claude'
 import { prisma } from '@/lib/db'
 import { getWeekStart } from '@/lib/week'
+import { getFoodImageUrl } from '@/lib/images'
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
@@ -19,7 +20,15 @@ export async function POST(req: NextRequest) {
   })
 
   const recentMealNames = Array.from(new Set(recentPlans.map((p) => p.meal.name)))
-
   const suggestions = await suggestMeals(mealType, recentMealNames)
-  return NextResponse.json(suggestions)
+
+  // Fetch images for all suggestions in parallel
+  const withImages = await Promise.all(
+    suggestions.map(async (s) => ({
+      ...s,
+      imageUrl: await getFoodImageUrl(s.name),
+    }))
+  )
+
+  return NextResponse.json(withImages)
 }

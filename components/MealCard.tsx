@@ -1,10 +1,13 @@
 'use client'
 
+import MealImage from './MealImage'
+
 interface Meal {
   id: string
   name: string
   type: string
   emoji: string
+  imageUrl?: string
   tags: string
   nutrition: { kcal: number; protein: number; carbs: number; fat: number }
   ingredients: { name: string; amount: string; unit: string; category: string }[]
@@ -28,7 +31,7 @@ export default function MealCard({ meal, onDelete, onClick }: MealCardProps) {
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-3 min-w-0">
-          <span className="text-3xl leading-none shrink-0">{meal.emoji}</span>
+          <MealImage imageUrl={meal.imageUrl} emoji={meal.emoji} size="md" />
           <div className="min-w-0">
             <p className="font-semibold text-gray-900 leading-tight truncate">{meal.name}</p>
             <p className="text-xs text-gray-400 mt-0.5 capitalize">{meal.type.toLowerCase()}</p>

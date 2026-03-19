@@ -21,6 +21,7 @@ export function parseMeal(meal: {
   nutrition: string
   tags: string
   emoji: string
+  imageUrl: string
   createdAt: Date
 }) {
   return {

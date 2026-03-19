@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import MealImage from './MealImage'
 
 interface Ingredient {
   name: string
@@ -12,6 +13,7 @@ interface Ingredient {
 interface MealSuggestion {
   name: string
   emoji: string
+  imageUrl: string
   ingredients: Ingredient[]
   nutrition: { kcal: number; protein: number; carbs: number; fat: number }
   tags: string[]
@@ -22,6 +24,7 @@ interface Meal {
   name: string
   type: string
   emoji: string
+  imageUrl?: string
   tags: string
   nutrition: { kcal: number; protein: number; carbs: number; fat: number }
   ingredients: Ingredient[]
@@ -156,11 +159,11 @@ export default function SuggestModal({
               {suggestions.map((s) => (
                 <div
                   key={s.name}
-                  className="mb-3 p-4 bg-gray-50 rounded-2xl cursor-pointer hover:bg-gray-100 transition-colors"
+                  className="mb-3 p-3 bg-gray-50 rounded-2xl cursor-pointer hover:bg-gray-100 transition-colors"
                   onClick={() => handleSelect(s)}
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-2xl leading-none">{s.emoji}</span>
+                    <MealImage imageUrl={s.imageUrl} emoji={s.emoji} size="md" />
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-gray-900 leading-tight">{s.name}</p>
                       {s.nutrition?.kcal > 0 && (
@@ -196,11 +199,11 @@ export default function SuggestModal({
                 filteredLibrary.map((meal) => (
                   <div
                     key={meal.id}
-                    className="mb-3 p-4 bg-gray-50 rounded-2xl cursor-pointer hover:bg-gray-100 transition-colors"
+                    className="mb-3 p-3 bg-gray-50 rounded-2xl cursor-pointer hover:bg-gray-100 transition-colors"
                     onClick={() => handleSelect(meal)}
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-2xl leading-none">{meal.emoji}</span>
+                      <MealImage imageUrl={meal.imageUrl} emoji={meal.emoji} size="md" />
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-gray-900 leading-tight">{meal.name}</p>
                         {meal.nutrition?.kcal > 0 && (
