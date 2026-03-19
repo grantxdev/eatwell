@@ -47,3 +47,12 @@ model Settings {
   id     String @id @default("household")
   people Int    @default(2)
 }
+
+model PantryItem {
+  id       String @id @default(cuid())
+  name     String
+  amount   String @default("")
+  unit     String @default("")
+  category String @default("other")
+  status   String @default("ok") // "ok" | "low" | "out"
+}
