@@ -6,8 +6,9 @@ Single-household meal planner web app. No auth, one shared URL. Minimal, opinion
 ## Stack
 - **Next.js 14** (App Router) — `app/` directory
 - **Tailwind CSS** — utility-first styling, no component library
-- **Prisma 5.7 + SQLite** — local DB at `prisma/dev.db`
-- **Anthropic SDK** — Claude claude-sonnet-4-6 for meal suggestions (`lib/claude.ts`)
+- **Prisma 5.7 + Neon Postgres** — cloud DB via Vercel integration
+- **Vercel Blob** — image storage for meal photos
+- **Anthropic SDK** — Claude claude-sonnet-4-6 for meal suggestions + prefill, claude-haiku-4-5 for shopping list canonicalization
 
 ## Running the app
 
@@ -24,11 +25,15 @@ npm run dev
 App runs at `http://localhost:3000`
 
 ## Environment setup
-Copy `.env.example` to `.env` and fill in your key:
+Copy `.env.example` to `.env` and fill in:
 ```
-DATABASE_URL="file:./dev.db"
+POSTGRES_PRISMA_URL="..."         # pooled connection (from Vercel Neon integration)
+POSTGRES_URL_NON_POOLING="..."    # direct connection (from Vercel Neon integration)
 ANTHROPIC_API_KEY="sk-ant-..."
+BLOB_READ_WRITE_TOKEN="..."       # from Vercel Blob integration (optional locally)
 ```
+
+Image upload falls back to `public/uploads/` locally when `BLOB_READ_WRITE_TOKEN` is not set.
 
 ## Database
 ```bash
@@ -39,53 +44,98 @@ npx prisma db push
 npx prisma studio
 ```
 
-SQLite limitations to be aware of:
-- No native `Json` field type — ingredients and nutrition are stored as JSON strings, parsed in `lib/db.ts`
-- No enums — MealType (BREAKFAST/LUNCH/DINNER) and DayOfWeek (MON–SUN) are plain strings
-- `createMany` is not supported — use `Promise.all(items.map(item => prisma.x.create(...)))` instead
+Postgres notes:
+- `ingredients` and `nutrition` are stored as JSON strings (String fields), parsed in `lib/db.ts` via `parseMeal()`
+- MealType (BREAKFAST/LUNCH/DINNER) and DayOfWeek (MON–SUN) are plain strings, not enums
+- `createMany` is avoided — use `Promise.all(items.map(item => prisma.x.create(...)))` instead
+- Meal `type` supports multiple types stored as comma-separated string e.g. `"BREAKFAST,DINNER"`
+
+## Deployment
+Hosted on Vercel. Pushes to `main` auto-deploy via GitHub integration.
+```bash
+vercel --prod --yes   # manual deploy if needed
+```
 
 ## Project structure
 ```
 app/
-  page.tsx              → redirects to /week
-  week/page.tsx         → 7-day meal grid (home screen)
-  shopping/page.tsx     → auto-generated shopping list
-  meals/page.tsx        → meal library
+  page.tsx                  → redirects to /week
+  week/page.tsx             → 7-day meal grid (home screen)
+  shopping/page.tsx         → shopping list with pantry integration + prices
+  meals/page.tsx            → meal library with filters
+  pantry/page.tsx           → pantry stock tracker
   api/
-    meals/route.ts      → GET all meals, POST create meal
-    meals/[id]/route.ts → DELETE meal
-    week/route.ts       → GET/POST/DELETE week plan slots
-    shopping/route.ts   → GET list, POST regenerate, PATCH toggle/clear
-    suggest/route.ts    → POST → calls Claude → returns 3 suggestions
+    meals/route.ts          → GET all meals, POST create meal
+    meals/[id]/route.ts     → PATCH edit meal, DELETE meal
+    week/route.ts           → GET/POST/DELETE week plan slots
+    shopping/route.ts       → GET list, POST regenerate (AI dedup), PUT add custom item,
+                              DELETE remove item, PATCH toggle/edit/clear
+    suggest/route.ts        → POST → calls Claude → returns 3 suggestions
+    prefill/route.ts        → POST { name } → calls Claude → returns ingredients/nutrition/tags
+    upload/route.ts         → POST multipart → Vercel Blob (prod) or public/uploads/ (dev)
+    pantry/route.ts         → GET/POST/PATCH/DELETE pantry items
+    settings/route.ts       → GET/PUT household people count
 
 components/
-  NavBar.tsx            → sticky bottom 3-tab nav
-  MealCard.tsx          → meal card used in library
-  MealDetailModal.tsx   → ingredient/nutrition detail sheet
-  SuggestModal.tsx      → AI suggest + library picker (shown when tapping +)
-  AddMealForm.tsx       → manual meal creation form
+  NavBar.tsx                → sticky bottom 4-tab nav (Week / Shopping / Pantry / Meals)
+  MealCard.tsx              → meal card used in library grid
+  MealImage.tsx             → image with letter-fallback placeholder
+  MealDetailModal.tsx       → ingredient/nutrition detail sheet with edit button
+  SuggestModal.tsx          → AI suggest + library picker (shown when tapping + in week)
+  AddMealForm.tsx           → add/edit meal form with AI prefill (✨ Fill button)
 
 lib/
-  db.ts                 → Prisma client singleton + parseMeal() helper
-  claude.ts             → suggestMeals() — calls Claude API
-  week.ts               → getWeekStart(), day/meal type labels, constants
+  db.ts                     → Prisma client singleton + parseMeal() helper
+  claude.ts                 → suggestMeals(), prefillMeal(), canonicalizeIngredients()
+  week.ts                   → getWeekStart(), day/meal type labels, constants
 ```
 
 ## Data model
 ```
-Meal          id, name, type, ingredients (JSON string), nutrition (JSON string), tags, emoji
+Meal          id, name, type (comma-separated: "BREAKFAST,DINNER"), ingredients (JSON string),
+              nutrition (JSON string), tags, emoji, imageUrl, servings, createdAt
+
 WeekPlan      id, weekStart (YYYY-MM-DD Monday), day, mealType, mealId → Meal
-ShoppingItem  id, weekStart, name, amount, unit, category, checked
+
+ShoppingItem  id, weekStart, name, amount, unit, category, checked, price (Float), custom (Boolean)
+              custom=true items survive shopping list regeneration
+
+PantryItem    id, name, amount, unit, category, status ("ok" | "low" | "out")
+
+Settings      id ("household"), people (Int, default 2)
 ```
 
 Week starts on Monday. `getWeekStart()` in `lib/week.ts` always returns the current Monday's date.
 
 ## Key behaviors
-- Tapping a filled slot → `MealDetailModal` (shows ingredients, nutrition, remove button)
-- Tapping an empty `+` slot → `SuggestModal` (AI tab loads suggestions from `/api/suggest`, Library tab shows filtered saved meals)
-- AI suggestions are saved to the Meal library automatically when selected
-- Shopping list regenerates (via `POST /api/shopping`) whenever a meal is assigned or removed from the week
-- Checked shopping items persist in DB across refreshes
+
+### Week planner
+- Tapping a filled slot → `MealDetailModal` (ingredients, nutrition, remove button)
+- Tapping an empty slot → `SuggestModal` (AI tab + Library tab filtered to that meal type)
+- Library tab shows meals matching ANY of their types (multi-type meals appear in relevant slots)
+- Assigning/removing a meal regenerates the shopping list immediately (awaited)
+
+### Meals library
+- Multi-type meals: type selector allows selecting multiple (stored as "BREAKFAST,LUNCH")
+- AI prefill: type meal name → tap ✨ Fill → ingredients/nutrition/tags auto-populated
+- Image: upload file (Vercel Blob) or paste URL
+- Filter by meal type — matches any of a meal's types
+
+### Shopping list
+- Auto-generated from week plan ingredients, scaled by `householdPeople / 2` (base = 2 people)
+- AI canonicalization (claude-haiku) merges fuzzy duplicates on each regeneration
+- Unit normalization before AI step (grams→g, tablespoons→tbsp, etc.)
+- Custom items (+ Add button): persist through regenerations, have × delete button
+- Pantry integration: green dot = in stock, yellow dot = running low (from Pantry tab)
+- Restock section: shows pantry items marked low or out
+- Tap any item to edit quantity, unit, price (₦)
+- Estimated total shown at bottom when prices are set
+- Household size control regenerates list with correct scaling
+
+### Pantry
+- Track stock with status: ok (black dot) / low (yellow dot) / out (gray dot)
+- Tap dot to cycle through statuses
+- Items feed into shopping list indicators
 
 ## GitHub
 Repo: `https://github.com/grantxdev/eatwell`
