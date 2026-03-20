@@ -10,6 +10,7 @@ interface ShoppingItem {
   unit: string
   category: string
   checked: boolean
+  price: number
 }
 
 interface PantryItem {
@@ -42,6 +43,10 @@ export default function ShoppingPage() {
   const [pantry, setPantry] = useState<PantryItem[]>([])
   const [loading, setLoading] = useState(true)
   const [people, setPeople] = useState(2)
+  const [editingItem, setEditingItem] = useState<ShoppingItem | null>(null)
+  const [editAmount, setEditAmount] = useState('')
+  const [editUnit, setEditUnit] = useState('')
+  const [editPrice, setEditPrice] = useState('')
 
   const fetchItems = useCallback(async () => {
     const [itemsRes, settingsRes, pantryRes] = await Promise.all([
@@ -97,8 +102,34 @@ export default function ShoppingPage() {
     })
   }
 
+  function openEdit(item: ShoppingItem) {
+    setEditingItem(item)
+    setEditAmount(item.amount)
+    setEditUnit(item.unit)
+    setEditPrice(item.price > 0 ? String(item.price) : '')
+  }
+
+  async function saveEdit() {
+    if (!editingItem) return
+    const price = parseFloat(editPrice) || 0
+    setItems((prev) =>
+      prev.map((i) =>
+        i.id === editingItem.id
+          ? { ...i, amount: editAmount, unit: editUnit, price }
+          : i
+      )
+    )
+    setEditingItem(null)
+    await fetch('/api/shopping', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: editingItem.id, amount: editAmount, unit: editUnit, price }),
+    })
+  }
+
   const checkedCount = items.filter((i) => i.checked).length
   const totalCount = items.length
+  const totalCost = items.reduce((sum, i) => sum + (i.price || 0), 0)
 
   const grouped = CATEGORY_ORDER.reduce<Record<string, ShoppingItem[]>>((acc, cat) => {
     const catItems = items.filter((i) => i.category === cat)
@@ -109,7 +140,7 @@ export default function ShoppingPage() {
   const restockItems = pantry.filter((p) => p.status === 'low' || p.status === 'out')
 
   return (
-    <div className="px-4 pt-6">
+    <div className="px-4 pt-6 pb-32">
       <div className="flex items-center justify-between mb-2">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Shopping</h1>
@@ -129,19 +160,9 @@ export default function ShoppingPage() {
       {/* Household size */}
       <div className="flex items-center gap-3 mb-6 py-3 px-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
         <span className="text-sm text-gray-500 flex-1">Household size</span>
-        <button
-          onClick={() => updatePeople(people - 1)}
-          className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-lg font-medium transition-colors"
-        >
-          −
-        </button>
+        <button onClick={() => updatePeople(people - 1)} className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-lg font-medium transition-colors">−</button>
         <span className="text-base font-semibold text-gray-900 w-6 text-center">{people}</span>
-        <button
-          onClick={() => updatePeople(people + 1)}
-          className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-lg font-medium transition-colors"
-        >
-          +
-        </button>
+        <button onClick={() => updatePeople(people + 1)} className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-lg font-medium transition-colors">+</button>
         <span className="text-sm text-gray-400">people</span>
       </div>
 
@@ -149,12 +170,10 @@ export default function ShoppingPage() {
         <div className="flex items-center justify-center py-20 text-gray-300 text-sm">Loading…</div>
       ) : (
         <div className="space-y-6">
-          {/* Restock section — pantry items that are low or out */}
+          {/* Restock section */}
           {restockItems.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1">
-                ⚠️ Restock
-              </p>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1">⚠️ Restock</p>
               <div className="bg-white rounded-2xl overflow-hidden border border-yellow-100 shadow-sm divide-y divide-gray-50">
                 {restockItems.map((item) => (
                   <div key={item.id} className="flex items-center gap-3 px-4 py-3">
@@ -169,13 +188,13 @@ export default function ShoppingPage() {
             </div>
           )}
 
-          {/* Meal plan shopping items */}
+          {/* Meal plan items */}
           {totalCount === 0 && restockItems.length === 0 ? (
             <div className="text-center py-12">
               <div className="w-14 h-14 bg-gray-100 rounded-2xl mx-auto mb-4 flex items-center justify-center text-2xl">🛒</div>
               <p className="text-gray-400 text-sm">Plan meals in the week view to auto-generate your list.</p>
             </div>
-          ) : totalCount > 0 ? (
+          ) : (
             Object.entries(grouped).map(([category, catItems]) => (
               <div key={category}>
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1">
@@ -191,37 +210,129 @@ export default function ShoppingPage() {
                     return (
                       <div
                         key={item.id}
-                        className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
-                        onClick={() => !inStock && toggleItem(item)}
+                        className="flex items-center gap-3 px-4 py-3"
                       >
-                        <div className={`w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors ${
-                          isChecked ? (inStock ? 'bg-gray-300 border-gray-300' : 'bg-black border-black') : 'border-gray-200'
-                        }`}>
+                        <div
+                          className={`w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors cursor-pointer ${
+                            isChecked ? (inStock ? 'bg-gray-300 border-gray-300' : 'bg-black border-black') : 'border-gray-200'
+                          }`}
+                          onClick={() => !inStock && toggleItem(item)}
+                        >
                           {isChecked && (
                             <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12">
                               <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                           )}
                         </div>
-                        <span className={`flex-1 text-sm capitalize transition-colors ${isChecked ? 'text-gray-300 line-through' : 'text-gray-800'}`}>
-                          {item.name}
-                        </span>
-                        {isLow && (
-                          <span className="text-xs font-medium text-yellow-500 bg-yellow-50 px-2 py-0.5 rounded-full">Low</span>
-                        )}
-                        {inStock && (
-                          <span className="text-xs text-gray-300">In pantry</span>
-                        )}
-                        {!inStock && !isLow && (item.amount || item.unit) && (
-                          <span className="text-xs text-gray-400">{item.amount} {item.unit}</span>
-                        )}
+
+                        <button
+                          className="flex-1 text-left"
+                          onClick={() => openEdit(item)}
+                        >
+                          <span className={`text-sm capitalize ${isChecked ? 'text-gray-300 line-through' : 'text-gray-800'}`}>
+                            {item.name}
+                          </span>
+                        </button>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          {isLow && <span className="text-xs font-medium text-yellow-500 bg-yellow-50 px-2 py-0.5 rounded-full">Low</span>}
+                          {inStock && <span className="text-xs text-gray-300">In pantry</span>}
+                          <button
+                            onClick={() => openEdit(item)}
+                            className="text-right"
+                          >
+                            <span className="text-xs text-gray-400 block">
+                              {item.amount} {item.unit}
+                            </span>
+                            {item.price > 0 && (
+                              <span className="text-xs font-medium text-gray-600 block">
+                                ${item.price.toFixed(2)}
+                              </span>
+                            )}
+                          </button>
+                        </div>
                       </div>
                     )
                   })}
                 </div>
               </div>
             ))
-          ) : null}
+          )}
+
+          {/* Total */}
+          {totalCost > 0 && (
+            <div className="bg-black text-white rounded-2xl px-4 py-4 flex items-center justify-between">
+              <span className="text-sm font-medium">Estimated total</span>
+              <span className="text-xl font-bold">${totalCost.toFixed(2)}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Edit item modal */}
+      {editingItem && (
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
+          onClick={() => setEditingItem(null)}
+        >
+          <div
+            className="bg-white rounded-3xl w-full max-w-md"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-gray-900 capitalize">{editingItem.name}</h2>
+                <button onClick={() => setEditingItem(null)} className="text-gray-300 hover:text-gray-500 text-2xl leading-none">×</button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Quantity</label>
+                  <input
+                    type="text"
+                    value={editAmount}
+                    onChange={(e) => setEditAmount(e.target.value)}
+                    placeholder="e.g. 500"
+                    className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-gray-900 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-black/10"
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Unit</label>
+                  <input
+                    type="text"
+                    value={editUnit}
+                    onChange={(e) => setEditUnit(e.target.value)}
+                    placeholder="e.g. g, pack, bunch"
+                    className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-gray-900 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-black/10"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Price (optional)</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                  <input
+                    type="number"
+                    value={editPrice}
+                    onChange={(e) => setEditPrice(e.target.value)}
+                    placeholder="0.00"
+                    step="0.01"
+                    min="0"
+                    className="w-full pl-8 pr-4 py-3 bg-gray-50 rounded-2xl text-gray-900 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-black/10"
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={saveEdit}
+                className="w-full py-4 bg-black text-white font-semibold rounded-2xl"
+              >
+                Save
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

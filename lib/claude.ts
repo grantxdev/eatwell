@@ -61,6 +61,36 @@ Return only the JSON array, no other text.`,
   return JSON.parse(jsonMatch[0]) as MealSuggestion[]
 }
 
+type Ingredient = { name: string; amount: string; unit: string; category: string }
+
+export async function canonicalizeIngredients(ingredients: Ingredient[]): Promise<Ingredient[]> {
+  if (ingredients.length === 0) return []
+  const message = await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 1024,
+    messages: [
+      {
+        role: 'user',
+        content: `Clean up this grocery ingredient list. Merge duplicates and similar items (e.g. "fresh ginger" + "ginger root" → "ginger", "garlic cloves" + "garlic" → "garlic"). Standardize to simple lowercase names. Sum numeric amounts for merged items. Keep the category from whichever entry has the most specific one (not "other" if avoidable).
+
+Input:
+${JSON.stringify(ingredients)}
+
+Return ONLY a JSON array with the cleaned list. Same shape: [{name, amount, unit, category}]. No explanation.`,
+      },
+    ],
+  })
+  const content = message.content[0]
+  if (content.type !== 'text') return ingredients
+  const match = content.text.trim().match(/\[[\s\S]*\]/)
+  if (!match) return ingredients
+  try {
+    return JSON.parse(match[0]) as Ingredient[]
+  } catch {
+    return ingredients
+  }
+}
+
 export async function prefillMeal(name: string): Promise<MealPrefill> {
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',

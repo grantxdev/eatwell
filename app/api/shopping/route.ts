@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getWeekStart } from '@/lib/week'
+import { canonicalizeIngredients } from '@/lib/claude'
 
 function normalizeUnit(unit: string): string {
   const u = unit.toLowerCase().trim()
@@ -75,7 +76,6 @@ export async function POST(req: NextRequest) {
       const normUnit = normalizeUnit(ing.unit)
       const key = `${ing.name.toLowerCase().trim()}__${normUnit}`
       if (ingredientMap.has(key)) {
-        // Add amounts together if same ingredient + unit
         const existing = ingredientMap.get(key)!
         const existingNum = parseFloat(existing.amount)
         const newNum = parseFloat(scaleAmount(ing.amount, scale))
@@ -93,11 +93,21 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // AI canonicalization — merges fuzzy duplicates like "fresh ginger" + "ginger root"
+  let finalIngredients = Array.from(ingredientMap.values())
+  if (finalIngredients.length > 0) {
+    try {
+      finalIngredients = await canonicalizeIngredients(finalIngredients)
+    } catch {
+      // fall back to uncanonicalised list if AI fails
+    }
+  }
+
   await prisma.shoppingItem.deleteMany({ where: { weekStart } })
 
-  if (ingredientMap.size > 0) {
+  if (finalIngredients.length > 0) {
     await Promise.all(
-      Array.from(ingredientMap.values()).map((ing) =>
+      finalIngredients.map((ing) =>
         prisma.shoppingItem.create({
           data: {
             weekStart,
@@ -134,7 +144,12 @@ export async function PATCH(req: NextRequest) {
 
   const item = await prisma.shoppingItem.update({
     where: { id: body.id },
-    data: { checked: body.checked },
+    data: {
+      ...(body.checked !== undefined && { checked: body.checked }),
+      ...(body.amount !== undefined && { amount: body.amount }),
+      ...(body.unit !== undefined && { unit: body.unit }),
+      ...(body.price !== undefined && { price: body.price }),
+    },
   })
   return NextResponse.json(item)
 }
