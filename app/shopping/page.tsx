@@ -205,7 +205,7 @@ export default function ShoppingPage() {
                     const pantryStatus = getPantryStatus(item.name)
                     const inStock = pantryStatus === 'ok'
                     const isLow = pantryStatus === 'low'
-                    const isChecked = item.checked || inStock
+                    const isChecked = item.checked
 
                     return (
                       <div
@@ -214,9 +214,9 @@ export default function ShoppingPage() {
                       >
                         <div
                           className={`w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors cursor-pointer ${
-                            isChecked ? (inStock ? 'bg-gray-300 border-gray-300' : 'bg-black border-black') : 'border-gray-200'
+                            isChecked ? 'bg-black border-black' : 'border-gray-200'
                           }`}
-                          onClick={() => !inStock && toggleItem(item)}
+                          onClick={() => toggleItem(item)}
                         >
                           {isChecked && (
                             <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12">
@@ -225,32 +225,24 @@ export default function ShoppingPage() {
                           )}
                         </div>
 
-                        <button
-                          className="flex-1 text-left"
-                          onClick={() => openEdit(item)}
-                        >
-                          <span className={`text-sm capitalize ${isChecked ? 'text-gray-300 line-through' : 'text-gray-800'}`}>
-                            {item.name}
-                          </span>
+                        <button className="flex-1 text-left min-w-0" onClick={() => openEdit(item)}>
+                          <div className="flex items-center gap-1.5">
+                            {inStock && <span className="w-2 h-2 rounded-full bg-green-400 shrink-0" />}
+                            {isLow && <span className="w-2 h-2 rounded-full bg-yellow-400 shrink-0" />}
+                            <span className={`text-sm capitalize ${isChecked ? 'text-gray-300 line-through' : 'text-gray-800'}`}>
+                              {item.name}
+                            </span>
+                          </div>
+                          {inStock && <span className="text-xs text-green-500 mt-0.5 block">In stock</span>}
+                          {isLow && <span className="text-xs text-yellow-500 mt-0.5 block">Running low</span>}
                         </button>
 
-                        <div className="flex items-center gap-2 shrink-0">
-                          {isLow && <span className="text-xs font-medium text-yellow-500 bg-yellow-50 px-2 py-0.5 rounded-full">Low</span>}
-                          {inStock && <span className="text-xs text-gray-300">In pantry</span>}
-                          <button
-                            onClick={() => openEdit(item)}
-                            className="text-right"
-                          >
-                            <span className="text-xs text-gray-400 block">
-                              {item.amount} {item.unit}
-                            </span>
-                            {item.price > 0 && (
-                              <span className="text-xs font-medium text-gray-600 block">
-                                ${item.price.toFixed(2)}
-                              </span>
-                            )}
-                          </button>
-                        </div>
+                        <button onClick={() => openEdit(item)} className="text-right shrink-0">
+                          <span className="text-xs text-gray-400 block">{item.amount} {item.unit}</span>
+                          {item.price > 0 && (
+                            <span className="text-xs font-medium text-gray-600 block">${item.price.toFixed(2)}</span>
+                          )}
+                        </button>
                       </div>
                     )
                   })}

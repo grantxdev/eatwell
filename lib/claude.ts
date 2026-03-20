@@ -71,12 +71,21 @@ export async function canonicalizeIngredients(ingredients: Ingredient[]): Promis
     messages: [
       {
         role: 'user',
-        content: `Clean up this grocery ingredient list. Merge duplicates and similar items (e.g. "fresh ginger" + "ginger root" → "ginger", "garlic cloves" + "garlic" → "garlic"). Standardize to simple lowercase names. Sum numeric amounts for merged items. Keep the category from whichever entry has the most specific one (not "other" if avoidable).
+        content: `You are a grocery list deduplicator. Merge any ingredients that refer to the same food item — even if the names differ slightly or units differ.
 
-Input:
-${JSON.stringify(ingredients)}
+Rules (apply strictly):
+- "garlic cloves", "garlic clove", "garlic" → merge into "garlic"
+- "fresh ginger", "ginger root", "ginger" → merge into "ginger"
+- "spring onion", "green onion", "scallion" → merge into "spring onion"
+- Strip adjectives like fresh, dried, ground, whole, raw, chopped, minced, sliced — they refer to the same ingredient
+- Use the simplest, shortest name (e.g. "garlic" not "garlic cloves")
+- When merging, sum numeric amounts if units are the same; if units differ, keep the larger/more useful unit and convert if obvious (e.g. 3 cloves + 10g garlic → just list "3 cloves garlic" since cloves is more useful for shopping)
+- Keep the most specific category (avoid "other" when a better category exists)
+- Lowercase all names
 
-Return ONLY a JSON array with the cleaned list. Same shape: [{name, amount, unit, category}]. No explanation.`,
+Input: ${JSON.stringify(ingredients)}
+
+Return ONLY a JSON array. Same shape: [{name, amount, unit, category}]. No markdown, no explanation.`,
       },
     ],
   })
