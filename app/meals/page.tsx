@@ -80,7 +80,7 @@ export default function MealsPage() {
     await fetch(`/api/meals/${id}`, { method: 'DELETE' })
   }
 
-  const filtered = filter === 'ALL' ? meals : meals.filter((m) => m.type === filter)
+  const filtered = filter === 'ALL' ? meals : meals.filter((m) => m.type.split(',').includes(filter))
 
   return (
     <div className="px-4 pt-6">

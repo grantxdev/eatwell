@@ -58,7 +58,9 @@ export default function MealCard({ meal, onDelete, onClick }: MealCardProps) {
       <div className="p-3">
         <p className="font-semibold text-gray-900 text-sm leading-tight truncate">{meal.name}</p>
         <div className="flex items-center justify-between mt-1">
-          <p className="text-xs text-gray-400 capitalize">{meal.type.toLowerCase()}</p>
+          <p className="text-xs text-gray-400 capitalize">
+            {meal.type.split(',').map((t) => t.charAt(0) + t.slice(1).toLowerCase()).join(' · ')}
+          </p>
           {meal.nutrition?.kcal > 0 && (
             <p className="text-xs text-gray-400">{meal.nutrition.kcal} kcal</p>
           )}

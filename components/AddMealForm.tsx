@@ -36,7 +36,7 @@ function ingredientsToText(ingredients: Ingredient[]): string {
 
 export default function AddMealForm({ editMeal, onSave, onClose }: AddMealFormProps) {
   const [name, setName] = useState(editMeal?.name ?? '')
-  const [type, setType] = useState(editMeal?.type ?? 'DINNER')
+  const [types, setTypes] = useState<string[]>(editMeal?.type ? editMeal.type.split(',') : ['DINNER'])
   const [imageUrl, setImageUrl] = useState(editMeal?.imageUrl ?? '')
   const [urlInput, setUrlInput] = useState('')
   const [showUrlInput, setShowUrlInput] = useState(false)
@@ -108,7 +108,7 @@ export default function AddMealForm({ editMeal, onSave, onClose }: AddMealFormPr
 
     await onSave({
       name: name.trim(),
-      type,
+      type: types.join(','),
       imageUrl,
       ingredients,
       nutrition: { kcal: parseInt(kcal) || 0, protein: parseInt(protein) || 0, carbs: 0, fat: 0 },
@@ -220,15 +220,21 @@ export default function AddMealForm({ editMeal, onSave, onClose }: AddMealFormPr
 
             {/* Meal type */}
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Meal type</label>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
+                Meal type <span className="normal-case font-normal text-gray-300">· select all that apply</span>
+              </label>
               <div className="flex gap-2">
                 {['BREAKFAST', 'LUNCH', 'DINNER'].map((t) => (
                   <button
                     key={t}
                     type="button"
-                    onClick={() => setType(t)}
+                    onClick={() => setTypes((prev) =>
+                      prev.includes(t)
+                        ? prev.length > 1 ? prev.filter((x) => x !== t) : prev
+                        : [...prev, t]
+                    )}
                     className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                      type === t ? 'bg-black text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      types.includes(t) ? 'bg-black text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
                     {t.charAt(0) + t.slice(1).toLowerCase()}

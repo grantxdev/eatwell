@@ -49,7 +49,7 @@ export default function SuggestModal({
   const [tab, setTab] = useState<'ai' | 'library'>('ai')
   const [selecting, setSelecting] = useState<string | null>(null)
 
-  const filteredLibrary = existingMeals.filter((m) => m.type === mealType)
+  const filteredLibrary = existingMeals.filter((m) => m.type.split(',').includes(mealType))
 
   async function loadSuggestions() {
     setLoading(true)
@@ -177,7 +177,7 @@ export default function SuggestModal({
             <>
               {filteredLibrary.length === 0 ? (
                 <p className="text-center text-gray-400 text-sm py-8">
-                  No {mealType.toLowerCase()} meals saved yet.
+                  No meals saved for {mealType.toLowerCase()} yet.
                 </p>
               ) : (
                 filteredLibrary.map((meal) => (
