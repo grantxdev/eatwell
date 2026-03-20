@@ -11,6 +11,7 @@ interface ShoppingItem {
   category: string
   checked: boolean
   price: number
+  custom: boolean
 }
 
 interface PantryItem {
@@ -47,6 +48,11 @@ export default function ShoppingPage() {
   const [editAmount, setEditAmount] = useState('')
   const [editUnit, setEditUnit] = useState('')
   const [editPrice, setEditPrice] = useState('')
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newAmount, setNewAmount] = useState('')
+  const [newUnit, setNewUnit] = useState('')
+  const [newCategory, setNewCategory] = useState('other')
 
   const fetchItems = useCallback(async () => {
     const [itemsRes, settingsRes, pantryRes] = await Promise.all([
@@ -91,6 +97,28 @@ export default function ShoppingPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: item.id, checked: !item.checked }),
     })
+  }
+
+  async function addCustomItem(e: React.FormEvent) {
+    e.preventDefault()
+    if (!newName.trim()) return
+    const res = await fetch('/api/shopping', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ weekStart, name: newName.trim(), amount: newAmount, unit: newUnit, category: newCategory }),
+    })
+    const item = await res.json()
+    setItems((prev) => [...prev, item])
+    setNewName('')
+    setNewAmount('')
+    setNewUnit('')
+    setNewCategory('other')
+    setShowAddForm(false)
+  }
+
+  async function deleteItem(id: string) {
+    setItems((prev) => prev.filter((i) => i.id !== id))
+    await fetch(`/api/shopping?id=${id}`, { method: 'DELETE' })
   }
 
   async function clearChecked() {
@@ -150,11 +178,19 @@ export default function ShoppingPage() {
               : `${totalCount - checkedCount} of ${totalCount} remaining`}
           </p>
         </div>
-        {checkedCount > 0 && (
-          <button onClick={clearChecked} className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
-            Clear checked
+        <div className="flex items-center gap-3">
+          {checkedCount > 0 && (
+            <button onClick={clearChecked} className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
+              Clear checked
+            </button>
+          )}
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="bg-black text-white text-sm font-semibold px-4 py-2.5 rounded-2xl"
+          >
+            + Add
           </button>
-        )}
+        </div>
       </div>
 
       {/* Household size */}
@@ -243,6 +279,14 @@ export default function ShoppingPage() {
                             <span className="text-xs font-medium text-gray-600 block">${item.price.toFixed(2)}</span>
                           )}
                         </button>
+                        {item.custom && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); deleteItem(item.id) }}
+                            className="w-6 h-6 flex items-center justify-center text-gray-200 hover:text-gray-400 transition-colors text-lg leading-none shrink-0"
+                          >
+                            ×
+                          </button>
+                        )}
                       </div>
                     )
                   })}
@@ -258,6 +302,84 @@ export default function ShoppingPage() {
               <span className="text-xl font-bold">${totalCost.toFixed(2)}</span>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Add custom item modal */}
+      {showAddForm && (
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
+          onClick={() => setShowAddForm(false)}
+        >
+          <div className="bg-white rounded-3xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <form onSubmit={addCustomItem} className="p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-gray-900">Add item</h2>
+                <button type="button" onClick={() => setShowAddForm(false)} className="text-gray-300 hover:text-gray-500 text-2xl leading-none">×</button>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Item *</label>
+                <input
+                  type="text"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="e.g. Dish soap, Bin bags…"
+                  className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-gray-900 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-black/10"
+                  autoFocus
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Amount</label>
+                  <input
+                    type="text"
+                    value={newAmount}
+                    onChange={(e) => setNewAmount(e.target.value)}
+                    placeholder="e.g. 1"
+                    className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-gray-900 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-black/10"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Unit</label>
+                  <input
+                    type="text"
+                    value={newUnit}
+                    onChange={(e) => setNewUnit(e.target.value)}
+                    placeholder="e.g. pack, bottle"
+                    className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-gray-900 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-black/10"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Category</label>
+                <div className="flex flex-wrap gap-2">
+                  {['produce', 'proteins', 'dairy', 'grains', 'pantry', 'other'].map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setNewCategory(cat)}
+                      className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-colors ${
+                        newCategory === cat ? 'bg-black text-white' : 'bg-gray-100 text-gray-600'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={!newName.trim()}
+                className="w-full py-4 bg-black text-white font-semibold rounded-2xl disabled:opacity-40"
+              >
+                Add to list
+              </button>
+            </form>
+          </div>
         </div>
       )}
 

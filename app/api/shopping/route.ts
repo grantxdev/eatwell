@@ -103,7 +103,8 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  await prisma.shoppingItem.deleteMany({ where: { weekStart } })
+  // Only delete meal-plan items — keep custom items added manually
+  await prisma.shoppingItem.deleteMany({ where: { weekStart, custom: false } })
 
   if (finalIngredients.length > 0) {
     await Promise.all(
@@ -127,6 +128,30 @@ export async function POST(req: NextRequest) {
   })
 
   return NextResponse.json(items)
+}
+
+export async function PUT(req: NextRequest) {
+  const body = await req.json()
+  const weekStart = body.weekStart ?? getWeekStart()
+  const item = await prisma.shoppingItem.create({
+    data: {
+      weekStart,
+      name: body.name,
+      amount: body.amount ?? '',
+      unit: body.unit ?? '',
+      category: body.category ?? 'other',
+      custom: true,
+    },
+  })
+  return NextResponse.json(item)
+}
+
+export async function DELETE(req: NextRequest) {
+  const { searchParams } = new URL(req.url)
+  const id = searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
+  await prisma.shoppingItem.delete({ where: { id } })
+  return NextResponse.json({ ok: true })
 }
 
 export async function PATCH(req: NextRequest) {

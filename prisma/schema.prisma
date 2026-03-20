@@ -42,6 +42,7 @@ model ShoppingItem {
   category  String  @default("other")
   checked   Boolean @default(false)
   price     Float   @default(0)
+  custom    Boolean @default(false)
 }
 
 model Settings {
