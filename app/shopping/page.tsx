@@ -53,6 +53,7 @@ export default function ShoppingPage() {
   const [newAmount, setNewAmount] = useState('')
   const [newUnit, setNewUnit] = useState('')
   const [newCategory, setNewCategory] = useState('other')
+  const [newPrice, setNewPrice] = useState('')
 
   const fetchItems = useCallback(async () => {
     const [itemsRes, settingsRes, pantryRes] = await Promise.all([
@@ -105,7 +106,7 @@ export default function ShoppingPage() {
     const res = await fetch('/api/shopping', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ weekStart, name: newName.trim(), amount: newAmount, unit: newUnit, category: newCategory }),
+      body: JSON.stringify({ weekStart, name: newName.trim(), amount: newAmount, unit: newUnit, category: newCategory, price: parseFloat(newPrice) || 0 }),
     })
     const item = await res.json()
     setItems((prev) => [...prev, item])
@@ -113,6 +114,7 @@ export default function ShoppingPage() {
     setNewAmount('')
     setNewUnit('')
     setNewCategory('other')
+    setNewPrice('')
     setShowAddForm(false)
   }
 
@@ -276,7 +278,7 @@ export default function ShoppingPage() {
                         <button onClick={() => openEdit(item)} className="text-right shrink-0">
                           <span className="text-xs text-gray-400 block">{item.amount} {item.unit}</span>
                           {item.price > 0 && (
-                            <span className="text-xs font-medium text-gray-600 block">${item.price.toFixed(2)}</span>
+                            <span className="text-xs font-medium text-gray-600 block">₦{item.price.toLocaleString()}</span>
                           )}
                         </button>
                         {item.custom && (
@@ -299,7 +301,7 @@ export default function ShoppingPage() {
           {totalCost > 0 && (
             <div className="bg-black text-white rounded-2xl px-4 py-4 flex items-center justify-between">
               <span className="text-sm font-medium">Estimated total</span>
-              <span className="text-xl font-bold">${totalCost.toFixed(2)}</span>
+              <span className="text-xl font-bold">₦{totalCost.toLocaleString()}</span>
             </div>
           )}
         </div>
@@ -349,6 +351,22 @@ export default function ShoppingPage() {
                     onChange={(e) => setNewUnit(e.target.value)}
                     placeholder="e.g. pack, bottle"
                     className="w-full px-4 py-3 bg-gray-50 rounded-2xl text-gray-900 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-black/10"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Price (optional)</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₦</span>
+                  <input
+                    type="number"
+                    value={newPrice}
+                    onChange={(e) => setNewPrice(e.target.value)}
+                    placeholder="0"
+                    step="1"
+                    min="0"
+                    className="w-full pl-8 pr-4 py-3 bg-gray-50 rounded-2xl text-gray-900 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-black/10"
                   />
                 </div>
               </div>
@@ -426,7 +444,7 @@ export default function ShoppingPage() {
               <div>
                 <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Price (optional)</label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₦</span>
                   <input
                     type="number"
                     value={editPrice}

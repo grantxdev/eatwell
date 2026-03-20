@@ -140,6 +140,7 @@ export async function PUT(req: NextRequest) {
       amount: body.amount ?? '',
       unit: body.unit ?? '',
       category: body.category ?? 'other',
+      price: body.price ?? 0,
       custom: true,
     },
   })
